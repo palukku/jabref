@@ -75,9 +75,7 @@ public class BibtexTextDocumentService implements TextDocumentService {
         List<BibEntry> entries;
         try {
             entries = new BibtexParser(jabRefCliPreferences.getImportFormatPreferences()).parseEntries(content);
-            System.out.printf("size: %d", entries.size());
-        } catch (ParseException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
             Diagnostic parseDiagnostic = new Diagnostic(
                     new Range(new Position(0, 0), new Position(0, 1)),
                     "Parse error: " + e.getMessage(),
