@@ -2,6 +2,7 @@ package org.jabref.logic.lsp.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.jabref.logic.importer.ParseException;
 import org.jabref.logic.importer.fileformat.BibtexParser;
@@ -14,6 +15,9 @@ import org.jabref.model.database.BibDatabaseContext;
 import org.jabref.model.entry.BibEntry;
 
 import com.airhacks.afterburner.injection.Injector;
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionList;
+import org.eclipse.lsp4j.CompletionParams;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.DidChangeTextDocumentParams;
@@ -23,19 +27,18 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.TextDocumentService;
 
 public class BibtexTextDocumentService implements TextDocumentService {
 
     private final CliPreferences jabRefCliPreferences;
-    private final BibtexParser bibtexParser;
     private final JournalAbbreviationRepository abbreviationRepository;
     private LanguageClient client;
 
     public BibtexTextDocumentService() {
         jabRefCliPreferences = Injector.instantiateModelOrService(CliPreferences.class);
-        bibtexParser = new BibtexParser(jabRefCliPreferences.getImportFormatPreferences());
         abbreviationRepository = new JournalAbbreviationRepository();
     }
 
@@ -55,7 +58,7 @@ public class BibtexTextDocumentService implements TextDocumentService {
 
     @Override
     public void didClose(DidCloseTextDocumentParams params) {
-        // client.publishDiagnostics(new PublishDiagnosticsParams(params.getTextDocument().getUri(), new ArrayList<>()));
+        client.publishDiagnostics(new PublishDiagnosticsParams(params.getTextDocument().getUri(), new ArrayList<>()));
     }
 
     @Override
@@ -63,18 +66,25 @@ public class BibtexTextDocumentService implements TextDocumentService {
 
     }
 
+    @Override
+    public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams position) {
+        return TextDocumentService.super.completion(position);
+    }
+
     private void handleDiagnostics(String uri, String content, int version) {
         List<BibEntry> entries;
         try {
-            entries = bibtexParser.parseEntries(content);
+            entries = new BibtexParser(jabRefCliPreferences.getImportFormatPreferences()).parseEntries(content);
+            System.out.printf("size: %d", entries.size());
         } catch (ParseException e) {
+            e.printStackTrace();
             Diagnostic parseDiagnostic = new Diagnostic(
                     new Range(new Position(0, 0), new Position(0, 1)),
                     "Parse error: " + e.getMessage(),
                     DiagnosticSeverity.Error,
                     "JabRef"
             );
-            publishDiagnostics(uri, List.of(parseDiagnostic), version);
+            client.publishDiagnostics(new PublishDiagnosticsParams(uri, List.of(parseDiagnostic), version));
             return;
         }
 
@@ -101,10 +111,6 @@ public class BibtexTextDocumentService implements TextDocumentService {
             }
         }
 
-        publishDiagnostics(uri, diagnostics, version);
-    }
-
-    private void publishDiagnostics(String uri, List<Diagnostic> diagnostics, int version) {
         client.publishDiagnostics(new PublishDiagnosticsParams(uri, diagnostics, version));
     }
 
