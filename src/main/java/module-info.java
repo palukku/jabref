@@ -193,5 +193,7 @@ open module org.jabref {
     requires mslinks;
     requires org.antlr.antlr4.runtime;
     requires org.libreoffice.uno;
+    requires org.eclipse.lsp4j;
+    requires org.eclipse.lsp4j.jsonrpc;
     // endregion
 }

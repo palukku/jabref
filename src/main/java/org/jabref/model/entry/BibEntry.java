@@ -52,6 +52,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.eventbus.EventBus;
 import com.tobiasdiez.easybind.EasyBind;
 import com.tobiasdiez.easybind.optional.OptionalBinding;
+import org.eclipse.lsp4j.Range;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,6 +142,8 @@ public class BibEntry implements Cloneable {
      * Is set to <code>true</code>, if parts of the entry changed. This causes the entry to be serialized based on the internal state (and not based on the old serialization)
      */
     private boolean changed;
+
+    private Range range;
 
     /**
      * Constructs a new BibEntry. The internal ID is set to IdGenerator.next()
@@ -1257,5 +1260,13 @@ public class BibEntry implements Cloneable {
             return true;
         }
         return StandardField.AUTOMATIC_FIELDS.containsAll(this.getFields());
+    }
+
+    public void setRange(Range range) {
+        this.range = range;
+    }
+
+    public Range getRange() {
+        return range;
     }
 }

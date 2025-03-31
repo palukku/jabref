@@ -383,6 +383,9 @@ dependencies {
     implementation 'io.zonky.test.postgres:embedded-postgres-binaries-darwin-arm64v8'
     implementation 'io.zonky.test.postgres:embedded-postgres-binaries-linux-arm64v8'
 
+    //Added LSP4J for LSP support
+    implementation 'com.github.eclipse:lsp4j:0.24.0'
+
     testImplementation 'io.github.classgraph:classgraph:4.8.179'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.12.1'
     testImplementation 'org.junit.platform:junit-platform-launcher:1.11.4'

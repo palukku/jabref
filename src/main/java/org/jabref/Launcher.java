@@ -8,6 +8,7 @@ import org.jabref.gui.preferences.GuiPreferences;
 import org.jabref.gui.preferences.JabRefGuiPreferences;
 import org.jabref.gui.util.DefaultFileUpdateMonitor;
 import org.jabref.logic.UiCommand;
+import org.jabref.logic.lsp.LSPLauncher;
 import org.jabref.logic.preferences.CliPreferences;
 import org.jabref.logic.search.PostgreServer;
 import org.jabref.logic.util.HeadlessExecutorService;
@@ -41,6 +42,9 @@ public class Launcher {
 
         PostgreServer postgreServer = new PostgreServer();
         Injector.setModelOrService(PostgreServer.class, postgreServer);
+
+        Thread serverThread = new Thread(LSPLauncher::new);
+        serverThread.start();
 
         JabRefGUI.setup(uiCommands, preferences, fileUpdateMonitor);
         JabRefGUI.launch(JabRefGUI.class, args);

@@ -59,6 +59,8 @@ import com.dd.plist.BinaryPropertyListParser;
 import com.dd.plist.NSArray;
 import com.dd.plist.NSDictionary;
 import com.dd.plist.NSString;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -326,11 +328,17 @@ public class BibtexParser implements Parser {
             entry.setCommentsBeforeEntry(
                     commentsAndEntryTypeDefinition.substring(0, commentsAndEntryTypeDefinition.lastIndexOf('@')));
 
+
             // store complete parsed serialization (comments, type definition + type contents)
 
             String parsedSerialization = commentsAndEntryTypeDefinition + dumpTextReadSoFarToString();
-            entry.setParsedSerialization(parsedSerialization);
 
+            int entryStart = commentsAndEntryTypeDefinition.length();
+            int entryEnd = parsedSerialization.length();
+
+            entry.setRange(getRangeFromIndices(parsedSerialization, entryStart, entryEnd));
+
+            entry.setParsedSerialization(parsedSerialization);
             database.insertEntry(entry);
         } catch (IOException ex) {
             // This makes the parser more robust:
@@ -339,6 +347,35 @@ public class BibtexParser implements Parser {
             parserResult.addWarning(Localization.lang("Error occurred when parsing entry") + ": '" + ex.getMessage()
                     + "'. " + "\n\n" + Localization.lang("JabRef skipped the entry."));
         }
+    }
+
+    public Range getRangeFromIndices(String text, int startIdx, int endIdx) {
+        String[] lines = text.split("\\n", -1);
+        int currIdx = 0;
+
+        Position start = null;
+        Position end = null;
+
+        for (int lineNum = 0; lineNum < lines.length; lineNum++) {
+            int lineLength = lines[lineNum].length() + 1; // +1 für '\n'
+
+            if (start == null && currIdx + lineLength > startIdx) {
+                start = new Position(lineNum, startIdx - currIdx);
+            }
+
+            if (currIdx + lineLength > endIdx) {
+                end = new Position(lineNum, endIdx - currIdx);
+                break;
+            }
+
+            currIdx += lineLength;
+        }
+
+        if (start == null || end == null) {
+            throw new IllegalArgumentException("Indices außerhalb des gültigen Bereichs");
+        }
+
+        return new Range(start, end);
     }
 
     private void parseJabRefComment(Map<String, String> meta) {
