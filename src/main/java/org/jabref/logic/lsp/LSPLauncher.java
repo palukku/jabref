@@ -11,49 +11,75 @@ import java.util.function.Function;
 
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.services.LanguageClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LSPLauncher {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(LSPLauncher.class);
+
+    private ServerSocket serverSocket;
+    private ExecutorService threadPool;
+    private volatile boolean running;
+
     public LSPLauncher() {
-        try (ServerSocket serverSocket = new ServerSocket(12345)) {
-            System.out.println("BibtexLSPServer listening on port 12345...");
+        start(12345);
+    }
 
-            ExecutorService threadPool = Executors.newCachedThreadPool();
+    public void start(int port) {
+        try {
+            serverSocket = new ServerSocket(port);
+            threadPool = Executors.newCachedThreadPool();
+            running = true;
 
-            while (true) {
-                Socket socket = serverSocket.accept();
-                System.out.println("Client connected!");
+            threadPool.execute(() -> {
+                LOGGER.info("LSP Server listening on port {}...", port);
+                while (running) {
+                    try {
+                        Socket socket = serverSocket.accept();
+                        LOGGER.info("LSP Client connected!");
 
-                threadPool.submit(() -> {
-                    try (InputStream in = socket.getInputStream();
-                         OutputStream out = socket.getOutputStream()) {
-
-                        LSPServer server = new LSPServer();
-
-                        Launcher<LanguageClient> launcher = Launcher.createLauncher(
-                                server,
-                                LanguageClient.class,
-                                in,
-                                out,
-                                Executors.newCachedThreadPool(),
-                                Function.identity()
-                        );
-
-                        server.connect(launcher.getRemoteProxy());
-
-                        launcher.startListening().get(); // Wartet bis Client trennt
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        try {
-                            socket.close();
-                        } catch (IOException ignored) {}
-                        System.out.println("Client disconnected.");
+                        threadPool.submit(() -> handleClient(socket));
+                    } catch (IOException e) {
+                        if (running) {
+                            LOGGER.error(e.getMessage(), e);
+                        }
                     }
-                });
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void handleClient(Socket socket) {
+        LSPServer server = new LSPServer();
+        try (socket; InputStream in = socket.getInputStream();
+             OutputStream out = socket.getOutputStream()) {
+                    Launcher<LanguageClient> launcher = org.eclipse.lsp4j.launch.LSPLauncher.createServerLauncher(server, in, out, Executors.newCachedThreadPool(), Function.identity());
+
+                    server.connect(launcher.getRemoteProxy());
+
+                    launcher.startListening().get();
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+        } finally {
+            LOGGER.info("LSP Client disconnected.");
+        }
+    }
+
+    public void shutdown() {
+        running = false;
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+            if (threadPool != null && !threadPool.isShutdown()) {
+                threadPool.shutdownNow();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
         }
+        LOGGER.info("LSP Server shutdown.");
     }
 }

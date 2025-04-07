@@ -17,8 +17,13 @@ import org.eclipse.lsp4j.services.LanguageClientAware;
 import org.eclipse.lsp4j.services.LanguageServer;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.eclipse.lsp4j.services.WorkspaceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LSPServer implements LanguageServer, LanguageClientAware {
+
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(LSPServer.class);
 
     private LanguageClient client;
     private WorkspaceService workspaceService;
@@ -52,7 +57,7 @@ public class LSPServer implements LanguageServer, LanguageClientAware {
 
     @Override
     public void exit() {
-        System.exit(exitCode);
+        //System.exit(exitCode);
     }
 
     @Override
@@ -70,7 +75,6 @@ public class LSPServer implements LanguageServer, LanguageClientAware {
         this.client = client;
         ((BibtexWorkspaceService) workspaceService).setClient(client);
         ((BibtexTextDocumentService) textDocumentService).setClient(client);
-        System.out.printf("Connected to client: %s%n", client);
         client.logMessage(new MessageParams(MessageType.Warning, "BibtexLSPServer connected."));
     }
 }

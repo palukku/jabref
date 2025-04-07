@@ -43,8 +43,8 @@ public class Launcher {
         PostgreServer postgreServer = new PostgreServer();
         Injector.setModelOrService(PostgreServer.class, postgreServer);
 
-        Thread serverThread = new Thread(LSPLauncher::new);
-        serverThread.start();
+        LSPLauncher launcher = new LSPLauncher();
+        Injector.setModelOrService(LSPLauncher.class, launcher);
 
         JabRefGUI.setup(uiCommands, preferences, fileUpdateMonitor);
         JabRefGUI.launch(JabRefGUI.class, args);

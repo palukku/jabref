@@ -29,6 +29,7 @@ import org.jabref.gui.util.UiTaskExecutor;
 import org.jabref.logic.UiCommand;
 import org.jabref.logic.ai.AiService;
 import org.jabref.logic.l10n.Localization;
+import org.jabref.logic.lsp.LSPLauncher;
 import org.jabref.logic.net.ProxyRegisterer;
 import org.jabref.logic.os.OS;
 import org.jabref.logic.remote.RemotePreferences;
@@ -413,6 +414,11 @@ public class JabRefGUI extends Application {
         LOGGER.trace("Shutting down postgreServer");
         PostgreServer postgreServer = Injector.instantiateModelOrService(PostgreServer.class);
         postgreServer.shutdown();
+
+        LOGGER.trace("Shutting down LSP server");
+        LSPLauncher lspServer = Injector.instantiateModelOrService(LSPLauncher.class);
+        lspServer.shutdown();
+
         LOGGER.trace("Shutting down HeadlessExecutorService");
         HeadlessExecutorService.INSTANCE.shutdownEverything();
         LOGGER.trace("Finished shutdownThreadPools");

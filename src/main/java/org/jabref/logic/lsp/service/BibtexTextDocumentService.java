@@ -1,5 +1,6 @@
 package org.jabref.logic.lsp.service;
 
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -39,7 +40,7 @@ public class BibtexTextDocumentService implements TextDocumentService {
 
     public BibtexTextDocumentService() {
         jabRefCliPreferences = Injector.instantiateModelOrService(CliPreferences.class);
-        abbreviationRepository = new JournalAbbreviationRepository();
+        abbreviationRepository = Injector.instantiateModelOrService(JournalAbbreviationRepository.class);
     }
 
     public void setClient(LanguageClient client) {
@@ -72,9 +73,9 @@ public class BibtexTextDocumentService implements TextDocumentService {
     }
 
     private void handleDiagnostics(String uri, String content, int version) {
-        List<BibEntry> entries;
+        BibDatabaseContext bibDatabaseContext;
         try {
-            entries = new BibtexParser(jabRefCliPreferences.getImportFormatPreferences()).parseEntries(content);
+            bibDatabaseContext = new BibtexParser(jabRefCliPreferences.getImportFormatPreferences()).parse(new StringReader(content)).getDatabaseContext();
         } catch (Exception e) {
             Diagnostic parseDiagnostic = new Diagnostic(
                     new Range(new Position(0, 0), new Position(0, 1)),
@@ -86,9 +87,8 @@ public class BibtexTextDocumentService implements TextDocumentService {
             return;
         }
 
-        BibDatabaseContext context = new BibDatabaseContext(new BibDatabase(entries));
         IntegrityCheck integrityCheck = new IntegrityCheck(
-                context,
+                bibDatabaseContext,
                 jabRefCliPreferences.getFilePreferences(),
                 jabRefCliPreferences.getCitationKeyPatternPreferences(),
                 abbreviationRepository,
@@ -97,7 +97,7 @@ public class BibtexTextDocumentService implements TextDocumentService {
 
         List<Diagnostic> diagnostics = new ArrayList<>();
 
-        for (BibEntry entry : entries) {
+        for (BibEntry entry : bibDatabaseContext.getEntries()) {
             List<IntegrityMessage> messages = integrityCheck.checkEntry(entry);
             for (IntegrityMessage message : messages) {
                 diagnostics.add(new Diagnostic(
